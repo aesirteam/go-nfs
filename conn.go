@@ -61,7 +61,8 @@ func (c *conn) serve(ctx context.Context) {
 			}
 			return
 		}
-		log.Printf("request: %v", w.req)
+
+		//log.Printf("request: %v", w.req)
 		err = c.handle(connCtx, w)
 		respErr := w.finish(connCtx)
 		if err != nil {

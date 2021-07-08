@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -53,29 +52,26 @@ func loadExportsFromFile(path string) (result []exportfs) {
 
 func (h *ExportAuthHandler) Mount(ctx context.Context, conn net.Conn, req nfs.MountRequest) (status nfs.MountStatus, hndl billy.Filesystem, auths []nfs.AuthFlavor) {
 	exports := loadExportsFromFile("/etc/exports")
+	remoteIP := conn.RemoteAddr().(*net.TCPAddr).IP
 	dirPath := string(req.Dirpath)
 
-	remoteIP := conn.RemoteAddr().(*net.TCPAddr).IP
-	ones, _ := remoteIP.DefaultMask().Size()
-	_, ipv4Net, err := net.ParseCIDR(remoteIP.String() + "/" + strconv.Itoa(ones))
-	if err != nil {
-		log.Println(err)
-		status = nfs.MountStatusErrServerFault
-		return
-	}
-
 	re := regexp.MustCompile(`^(.*)\((.*)\)$`)
-
 	if len(exports) > 0 {
 		for _, item := range exports {
 			if v, ok := item[dirPath]; ok {
 				for _, s := range v {
 					if m := re.FindAllStringSubmatch(s, 1); len(m) > 0 {
-						if remoteIP.IsLoopback() || m[0][1] == "*" || m[0][1] == ipv4Net.String() {
-							status = nfs.MountStatusOk
-							hndl = h.fs
-							auths = []nfs.AuthFlavor{nfs.AuthFlavorNull}
-							return
+						if m[0][1] == "*" {
+							m[0][1] = "0.0.0.0/0"
+						}
+
+						if localIP, localIpNet, err := net.ParseCIDR(m[0][1]); err == nil {
+							if remoteIP.IsLoopback() || localIP.Equal(remoteIP) || localIpNet.Contains(remoteIP) {
+								status = nfs.MountStatusOk
+								hndl = h.fs
+								auths = []nfs.AuthFlavor{nfs.AuthFlavorNull}
+								return
+							}
 						}
 					}
 				}
