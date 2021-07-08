@@ -13,12 +13,13 @@ import (
 	"github.com/willscott/go-nfs"
 )
 
-func NewExportAuthHandler(fs billy.Filesystem) nfs.Handler {
-	return &ExportAuthHandler{fs}
+func NewExportAuthHandler(fs billy.Filesystem, exports string) nfs.Handler {
+	return &ExportAuthHandler{fs, exports}
 }
 
 type ExportAuthHandler struct {
-	fs billy.Filesystem
+	fs      billy.Filesystem
+	exports string
 }
 
 type exportfs map[string][]string
@@ -51,7 +52,7 @@ func loadExportsFromFile(path string) (result []exportfs) {
 }
 
 func (h *ExportAuthHandler) Mount(ctx context.Context, conn net.Conn, req nfs.MountRequest) (status nfs.MountStatus, hndl billy.Filesystem, auths []nfs.AuthFlavor) {
-	exports := loadExportsFromFile("/etc/exports")
+	exports := loadExportsFromFile(h.exports)
 	remoteIP := conn.RemoteAddr().(*net.TCPAddr).IP
 	dirPath := string(req.Dirpath)
 

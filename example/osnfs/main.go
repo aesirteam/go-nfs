@@ -30,7 +30,7 @@ func main() {
 	bfsPlusChange := NewChangeOSFS(bfs)
 
 	//handler := nfshelper.NewNullAuthHandler(bfsPlusChange)
-	handler := nfshelper.NewExportAuthHandler(bfsPlusChange)
+	handler := nfshelper.NewExportAuthHandler(bfsPlusChange, "/etc/exports")
 	cacheHelper := nfshelper.NewCachingHandler(handler, 1024)
 	fmt.Printf("%v", nfs.Serve(listener, cacheHelper))
 }
